@@ -1,17 +1,18 @@
-import { createRequestContext } from "../server/auth.mjs";
 import { handleLogin } from "../server/handlers.mjs";
-import { toResponse } from "../server/web.mjs";
+import {
+  nodeContext,
+  readJsonBody,
+  sendNodeResponse,
+} from "../server/vercel-node.mjs";
 
-export default async function handler(request) {
-  if (request.method !== "POST") {
-    return Response.json({ error: "Not found" }, { status: 404 });
+export default function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(404).json({ error: "Not found" });
   }
 
   try {
-    const body = await request.json();
-    const ctx = createRequestContext(request);
-    return toResponse(handleLogin(ctx, body));
+    sendNodeResponse(res, handleLogin(nodeContext(req), readJsonBody(req)));
   } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+    res.status(400).json({ error: "Invalid JSON body" });
   }
 }

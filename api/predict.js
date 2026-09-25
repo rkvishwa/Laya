@@ -1,12 +1,14 @@
-import { createRequestContext } from "../server/auth.mjs";
 import { handlePredict } from "../server/handlers.mjs";
-import { toResponse } from "../server/web.mjs";
+import {
+  nodeContext,
+  readPredictBody,
+  sendNodeResponse,
+} from "../server/vercel-node.mjs";
 
-export default async function handler(request) {
-  if (request.method !== "POST") {
-    return Response.json({ error: "Not found" }, { status: 404 });
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(404).json({ error: "Not found" });
   }
 
-  const ctx = createRequestContext(request);
-  return toResponse(await handlePredict(ctx, await request.text()));
+  sendNodeResponse(res, await handlePredict(nodeContext(req), readPredictBody(req)));
 }

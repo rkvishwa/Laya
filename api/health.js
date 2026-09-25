@@ -1,12 +1,10 @@
-import { createRequestContext } from "../server/auth.mjs";
 import { handleHealth } from "../server/handlers.mjs";
-import { toResponse } from "../server/web.mjs";
+import { nodeContext, sendNodeResponse } from "../server/vercel-node.mjs";
 
-export default function handler(request) {
-  if (request.method !== "GET") {
-    return Response.json({ error: "Not found" }, { status: 404 });
+export default function handler(req, res) {
+  if (req.method !== "GET") {
+    return res.status(404).json({ error: "Not found" });
   }
 
-  const ctx = createRequestContext(request);
-  return toResponse(handleHealth(ctx));
+  sendNodeResponse(res, handleHealth(nodeContext(req)));
 }

@@ -27,7 +27,10 @@ export default function App() {
   const { request, error: buildError } = buildRequest(stateText, questions);
 
   useEffect(() => {
-    fetch("/api/session")
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+
+    fetch("/api/session", { signal: controller.signal })
       .then(async (r) => {
         if (!r.ok) throw new Error("Unauthorized");
         return parseJsonResponse<{ email?: string }>(r);
@@ -36,7 +39,10 @@ export default function App() {
         setSessionEmail(data.email || "user");
       })
       .catch(() => setSessionEmail(null))
-      .finally(() => setAuthLoading(false));
+      .finally(() => {
+        window.clearTimeout(timeout);
+        setAuthLoading(false);
+      });
   }, []);
 
   useEffect(() => {

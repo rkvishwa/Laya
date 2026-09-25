@@ -1,12 +1,10 @@
-import { createRequestContext } from "../server/auth.mjs";
 import { handleLogout } from "../server/handlers.mjs";
-import { toResponse } from "../server/web.mjs";
+import { nodeContext, sendNodeResponse } from "../server/vercel-node.mjs";
 
-export default function handler(request) {
-  if (request.method !== "POST") {
-    return Response.json({ error: "Not found" }, { status: 404 });
+export default function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(404).json({ error: "Not found" });
   }
 
-  const ctx = createRequestContext(request);
-  return toResponse(handleLogout(ctx));
+  sendNodeResponse(res, handleLogout(nodeContext(req)));
 }
