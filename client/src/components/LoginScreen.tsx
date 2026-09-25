@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseJsonResponse } from "../lib/api";
 import { Alert } from "./ui/Alert";
 import { Button } from "./ui/Button";
 import { Card, CardHeader, CardTitle } from "./ui/Card";
@@ -26,11 +27,11 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
         body: JSON.stringify({ email, password }),
       });
 
-      const payload = (await res.json()) as {
+      const payload = await parseJsonResponse<{
         email?: string;
         error?: string;
         detail?: string;
-      };
+      }>(res);
 
       if (!res.ok) {
         setError(payload.detail || payload.error || `Login failed (${res.status})`);

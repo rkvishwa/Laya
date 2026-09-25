@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parseJsonResponse } from "./lib/api";
 import { buildRequest, INVOICE_PRESET, PRESETS } from "./presets";
 import type { PredictResponse, QuestionDraft } from "./types";
 import { LoginScreen } from "./components/LoginScreen";
@@ -27,11 +28,11 @@ export default function App() {
 
   useEffect(() => {
     fetch("/api/session")
-      .then((r) => {
+      .then(async (r) => {
         if (!r.ok) throw new Error("Unauthorized");
-        return r.json();
+        return parseJsonResponse<{ email?: string }>(r);
       })
-      .then((data: { email?: string }) => {
+      .then((data) => {
         setSessionEmail(data.email || "user");
       })
       .catch(() => setSessionEmail(null))
@@ -42,8 +43,8 @@ export default function App() {
     if (!sessionEmail) return;
 
     fetch("/api/health")
-      .then((r) => r.json())
-      .then((data: { configured?: boolean }) => setConfigured(Boolean(data.configured)))
+      .then((r) => parseJsonResponse<{ configured?: boolean }>(r))
+      .then((data) => setConfigured(Boolean(data.configured)))
       .catch(() => setConfigured(false));
   }, [sessionEmail]);
 
@@ -89,7 +90,7 @@ export default function App() {
         body: JSON.stringify(request),
       });
 
-      const payload = (await res.json()) as PredictResponse;
+      const payload = await parseJsonResponse<PredictResponse>(res);
       const elapsed = Math.round(performance.now() - started);
 
       if (!res.ok) {
