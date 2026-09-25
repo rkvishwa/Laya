@@ -1,4 +1,22 @@
-import type { Answer, PredictResponse } from "../types";
+import type { Answer, NoulAnswer, PredictResponse } from "../types";
+
+function noulYesProbability(answer: NoulAnswer): number {
+  if (typeof answer.noul === "number") {
+    return answer.noul;
+  }
+  const pTrue = answer.probabilities?.true;
+  if (typeof pTrue === "number") {
+    return pTrue;
+  }
+  return 0;
+}
+
+function noulHeadlineYes(answer: NoulAnswer, yesProb: number): boolean {
+  if (answer.choice !== undefined) {
+    return answer.choice === "true" || answer.choice.toLowerCase() === "yes";
+  }
+  return yesProb >= 0.5;
+}
 import { Alert } from "./ui/Alert";
 import { Badge } from "./ui/Badge";
 import { Card, CardHeader, CardTitle } from "./ui/Card";
@@ -74,6 +92,11 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
             <div className="flex items-center justify-between gap-3">
               <strong className="text-lg text-slate-900">
                 {answer.score.toFixed(2)}
+                {answer.choice !== undefined && (
+                  <span className="ml-2 text-base font-medium text-slate-700">
+                    ({answer.choice})
+                  </span>
+                )}
               </strong>
               {answer.confidence !== undefined && (
                 <span className="text-sm text-slate-500">
@@ -82,32 +105,48 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
               )}
             </div>
             <ProbabilityBars
-              items={Object.entries(answer.probabilities).map(([idx, p]) => ({
-                label: answer.legend[idx] ?? idx,
+              items={Object.entries(answer.probabilities).map(([key, p]) => ({
+                label: answer.legend?.[key] ?? key,
                 value: p,
               }))}
             />
           </>
         )}
 
-        {answer.type === "noul" && (
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <strong className="text-lg text-slate-900">
-                {answer.noul >= 0.5 ? "yes" : "no"}
-              </strong>
-              <span className="text-sm text-slate-500">
-                probability yes {(answer.noul * 100).toFixed(0)}%
-              </span>
-            </div>
-            <ProbabilityBars
-              items={[
-                { label: "no", value: 1 - answer.noul },
-                { label: "yes", value: answer.noul },
-              ]}
-            />
-          </>
-        )}
+        {answer.type === "noul" && (() => {
+          const yesProb = noulYesProbability(answer);
+          const yes = noulHeadlineYes(answer, yesProb);
+          const bars =
+            answer.probabilities &&
+            typeof answer.probabilities.false === "number" &&
+            typeof answer.probabilities.true === "number"
+              ? [
+                  { label: "false", value: answer.probabilities.false },
+                  { label: "true", value: answer.probabilities.true },
+                ]
+              : [
+                  { label: "no", value: 1 - yesProb },
+                  { label: "yes", value: yesProb },
+                ];
+          return (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <strong className="text-lg text-slate-900">
+                  {yes ? "yes" : "no"}
+                </strong>
+                <span className="text-sm text-slate-500">
+                  {answer.confidence !== undefined && (
+                    <>
+                      confidence {(answer.confidence * 100).toFixed(0)}% ·{" "}
+                    </>
+                  )}
+                  probability yes {(yesProb * 100).toFixed(0)}%
+                </span>
+              </div>
+              <ProbabilityBars items={bars} />
+            </>
+          );
+        })()}
       </div>
     );
   }

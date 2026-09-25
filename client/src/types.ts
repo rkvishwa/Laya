@@ -37,14 +37,18 @@ export interface ChoiceAnswer {
 export interface ScoreAnswer {
   type: "score";
   score: number;
-  legend: Record<string, string>;
+  legend?: Record<string, string>;
+  choice?: string;
   probabilities: Record<string, number>;
   confidence?: number;
 }
 
 export interface NoulAnswer {
   type: "noul";
-  noul: number;
+  noul?: number;
+  choice?: string;
+  confidence?: number;
+  probabilities?: Record<string, number>;
 }
 
 export type Answer = ChoiceAnswer | ScoreAnswer | NoulAnswer;
