@@ -34,6 +34,19 @@ npm run dev
 
 Open http://localhost:5173 and sign in with your `AUTH_EMAIL` / `AUTH_PASSWORD`.
 
+## Deploy to Vercel
+
+1. Push the repo to GitHub and import it in Vercel.
+2. Add these environment variables in the Vercel project settings:
+   - `LAYA_DOMAIN`
+   - `LAYA_API_KEY`
+   - `AUTH_EMAIL`
+   - `AUTH_PASSWORD`
+   - `AUTH_SECRET`
+3. Deploy. Vercel serves the React app from `client/dist` and runs the API routes in `api/` as serverless functions.
+
+Local dev uses `server/proxy.mjs`. Production on Vercel uses the same shared handlers in `server/handlers.mjs`, so auth and predict behavior match.
+
 ## How it works
 
 - The React UI builds `{ state, questions }` with `choice`, `score`, and `noul` question types.

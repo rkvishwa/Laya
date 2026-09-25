@@ -73,8 +73,7 @@ function verifyToken(token) {
   }
 }
 
-function parseCookies(req) {
-  const header = req.headers.cookie;
+function parseCookieHeader(header) {
   if (!header) return {};
 
   const cookies = {};
@@ -84,11 +83,6 @@ function parseCookies(req) {
     cookies[rawKey] = decodeURIComponent(rest.join("="));
   }
   return cookies;
-}
-
-function isSecureRequest(req) {
-  if (req.headers["x-forwarded-proto"] === "https") return true;
-  return false;
 }
 
 function buildCookie(name, value, options = {}) {
@@ -101,37 +95,63 @@ function buildCookie(name, value, options = {}) {
   return parts.join("; ");
 }
 
-export function createSessionCookie(req) {
+export function createRequestContext(source) {
+  if (source?.headers?.get) {
+    const forwarded = source.headers.get("x-forwarded-for");
+    return {
+      cookieHeader: source.headers.get("cookie"),
+      secure: source.headers.get("x-forwarded-proto") === "https",
+      clientIp:
+        (typeof forwarded === "string" && forwarded.split(",")[0].trim()) ||
+        "unknown",
+    };
+  }
+
+  const forwarded = source.headers?.["x-forwarded-for"];
+  return {
+    cookieHeader: source.headers?.cookie || null,
+    secure: source.headers?.["x-forwarded-proto"] === "https",
+    clientIp:
+      (typeof forwarded === "string" && forwarded.split(",")[0].trim()) ||
+      source.socket?.remoteAddress ||
+      "unknown",
+  };
+}
+
+export function createSessionCookie(ctx) {
   const now = Date.now();
   const payload = {
     iat: now,
     exp: now + SESSION_MAX_AGE_SEC * 1000,
   };
   const token = signPayload(payload);
-  const cookie = buildCookie(COOKIE_NAME, token, {
+  return buildCookie(COOKIE_NAME, token, {
     maxAge: SESSION_MAX_AGE_SEC,
     httpOnly: true,
     sameSite: "Strict",
-    secure: isSecureRequest(req),
+    secure: ctx.secure,
   });
-  return cookie;
 }
 
-export function clearSessionCookie(req) {
+export function clearSessionCookie(ctx) {
   return buildCookie(COOKIE_NAME, "", {
     maxAge: 0,
     httpOnly: true,
     sameSite: "Strict",
-    secure: isSecureRequest(req),
+    secure: ctx.secure,
   });
 }
 
-export function getSessionFromRequest(req) {
-  const cookies = parseCookies(req);
+export function getSessionFromContext(ctx) {
+  const cookies = parseCookieHeader(ctx.cookieHeader);
   const token = cookies[COOKIE_NAME];
   const payload = verifyToken(token);
   if (!payload) return null;
   return { email: AUTH_EMAIL };
+}
+
+export function getSessionFromRequest(req) {
+  return getSessionFromContext(createRequestContext(req));
 }
 
 export function verifyCredentials(email, password) {
@@ -142,16 +162,8 @@ export function verifyCredentials(email, password) {
   return true;
 }
 
-function getClientIp(req) {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-  return req.socket?.remoteAddress || "unknown";
-}
-
-export function checkLoginRateLimit(req) {
-  const ip = getClientIp(req);
+export function checkLoginRateLimit(ctx) {
+  const ip = ctx.clientIp;
   const now = Date.now();
   const entry = loginAttempts.get(ip);
 
@@ -170,8 +182,8 @@ export function checkLoginRateLimit(req) {
   return { allowed: true };
 }
 
-export function recordLoginFailure(req) {
-  const ip = getClientIp(req);
+export function recordLoginFailure(ctx) {
+  const ip = ctx.clientIp;
   const now = Date.now();
   const entry = loginAttempts.get(ip);
 
@@ -183,7 +195,6 @@ export function recordLoginFailure(req) {
   entry.count += 1;
 }
 
-export function clearLoginFailures(req) {
-  const ip = getClientIp(req);
-  loginAttempts.delete(ip);
+export function clearLoginFailures(ctx) {
+  loginAttempts.delete(ctx.clientIp);
 }

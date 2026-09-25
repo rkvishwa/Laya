@@ -1,9 +1,12 @@
-import { layaConfig } from "../server/upstream.mjs";
+import { createRequestContext } from "../server/auth.mjs";
+import { handleHealth } from "../server/handlers.mjs";
+import { toResponse } from "../server/web.mjs";
 
-export default function handler() {
-  const { configured, domain } = layaConfig();
-  return Response.json({
-    configured,
-    domain: domain || null,
-  });
+export default function handler(request) {
+  if (request.method !== "GET") {
+    return Response.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const ctx = createRequestContext(request);
+  return toResponse(handleHealth(ctx));
 }

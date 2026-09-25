@@ -1,12 +1,12 @@
 import { createRequestContext } from "../server/auth.mjs";
-import { handlePredict } from "../server/handlers.mjs";
+import { handleSession } from "../server/handlers.mjs";
 import { toResponse } from "../server/web.mjs";
 
-export default async function handler(request) {
-  if (request.method !== "POST") {
+export default function handler(request) {
+  if (request.method !== "GET") {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
   const ctx = createRequestContext(request);
-  return toResponse(await handlePredict(ctx, await request.text()));
+  return toResponse(handleSession(ctx));
 }
