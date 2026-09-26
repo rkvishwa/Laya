@@ -92,7 +92,7 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden lg:px-8">
       <AppHeader
         sessionEmail={sessionEmail}
         sessionRole={sessionRole}
@@ -101,7 +101,8 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
         onLogout={onLogout}
       />
 
-      <div className="space-y-8">
+      <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-none">
+        <div className="space-y-8 pb-6">
         <Card>
           <CardHeader>
             <CardTitle>Overview</CardTitle>
@@ -110,36 +111,88 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
             The Brainvave Decision Model evaluates structured context and returns
             answers to one or more questions in a single request. Each question is
             either a <strong>choice</strong> (pick one labeled option) or a{" "}
-            <strong>score</strong> (ordinal level along a scale you define). Use
-            the playground to compose requests interactively, or call the same
-            JSON shape from your own integration through this app&apos;s proxy.
+            <strong>score</strong> (ordinal level along a scale you define). You
+            can try it in the <strong>Playground</strong> or send the same JSON
+            from your own application.
           </p>
         </Card>
 
         <Card className="space-y-6">
-          <Section title="Getting started">
+          <Section title="Testing in the playground">
             <ol className="list-decimal space-y-2 pl-5">
               <li>
-                Sign in with admin credentials (
-                <code>AUTH_EMAIL</code> / <code>AUTH_PASSWORD</code>) or, if
-                enabled, the guest account configured on the server (
-                <code>GUEST_EMAIL</code> / <code>GUEST_PASSWORD</code>).
+                Open <strong>Playground</strong> from the navigation above.
               </li>
               <li>
-                Open <strong>Playground</strong> and confirm the server shows as
-                configured (requires <code>MODEL_BASE_URL</code> plus{" "}
-                <code>MODEL_API_KEY</code> for admin or <code>GUEST_API</code>{" "}
-                for guest sessions).
+                Start from a preset (<strong>Invoice routing</strong> or{" "}
+                <strong>Support ticket</strong>) or build your own{" "}
+                <strong>state</strong> and questions.
               </li>
               <li>
-                Enter a <strong>state</strong> JSON object and add at least one
-                question.
+                Use <strong>Request preview</strong> to check the JSON before
+                you send it.
               </li>
               <li>
-                Click <strong>Run query</strong> to see answers, probability
-                bars, and raw JSON in the results panel.
+                Click <strong>Run query</strong>. The results panel shows the
+                chosen answer or score, probability bars, confidence, and raw
+                JSON.
               </li>
             </ol>
+            <p>
+              Iterate on instructions and option descriptions—clear criteria
+              usually produce more stable answers. Compare several states side
+              by side by editing state and re-running.
+            </p>
+          </Section>
+
+          {docsInfo?.guestLoginEnabled && docsInfo.guestApiKey && (
+            <Section title="Testing in your own applications">
+              <p>
+                Use the same request shape as the playground. Send a{" "}
+                <code>POST</code> with <code>Content-Type: application/json</code>{" "}
+                and the API key below in the <code>X-API-Key</code> header.
+              </p>
+              <p className="font-medium text-slate-900">API key</p>
+              <pre className="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800">
+                {docsInfo.guestApiKey}
+              </pre>
+              {docsInfo.predictUrl && (
+                <>
+                  <p className="font-medium text-slate-900">Example (curl)</p>
+                  <pre className="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800 whitespace-pre-wrap">
+                    {buildCurlExample(docsInfo.predictUrl, docsInfo.guestApiKey)}
+                  </pre>
+                </>
+              )}
+              <p>
+                You can also call this app&apos;s{" "}
+                <code>/api/predict</code> from a browser or backend while your
+                session cookie is present—the playground uses that path
+                automatically.
+              </p>
+            </Section>
+          )}
+
+          <Section title="Accuracy and confidence">
+            <p>
+              On typical decision tasks, per-answer <strong>confidence</strong>{" "}
+              often falls between about <strong>0.648</strong> and{" "}
+              <strong>0.697</strong>. That range reflects how strongly the model
+              separates the best option from the rest on structured inputs—not a
+              guarantee for every request.
+            </p>
+            <p>
+              Use <code>confidence</code> together with{" "}
+              <code>probabilities</code>: a high top probability with confidence
+              in that band usually means a solid automatic decision; a flat
+              probability spread or confidence toward the lower end of the range
+              is a signal to review, escalate, or ask for more context in{" "}
+              <code>state</code>.
+            </p>
+            <p>
+              Sharper question instructions and distinct option definitions tend
+              to improve both the chosen label and the reported confidence.
+            </p>
           </Section>
 
           <Section title="State">
@@ -208,36 +261,10 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
             </p>
           </Section>
 
-          {docsInfo?.guestLoginEnabled && docsInfo.guestApiKey && (
-            <Section title="Guest testing">
-              <p>
-                A guest account lets you try the decision API without admin
-                credentials. Sign in with the guest email and password your
-                operator configured (<code>GUEST_EMAIL</code> /{" "}
-                <code>GUEST_PASSWORD</code>). Guest playground requests use the
-                guest API key on the server; the key below is for direct API
-                testing (for example with <code>curl</code>).
-              </p>
-              <p className="font-medium text-slate-900">Guest API key</p>
-              <pre className="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800">
-                {docsInfo.guestApiKey}
-              </pre>
-              {docsInfo.predictUrl && (
-                <>
-                  <p className="font-medium text-slate-900">Example request</p>
-                  <pre className="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800 whitespace-pre-wrap">
-                    {buildCurlExample(docsInfo.predictUrl, docsInfo.guestApiKey)}
-                  </pre>
-                </>
-              )}
-            </Section>
-          )}
-
           <Section title="Request shape">
             <p>
-              The playground builds this payload and POSTs it to{" "}
-              <code>/api/predict</code> (authenticated). The server forwards to
-              your configured predict endpoint with the API key.
+              Every predict call sends a body like this. The playground builds it
+              for you; in your app, serialize the same structure.
             </p>
             <pre className="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800">
               {JSON.stringify(exampleRequest, null, 2)}
@@ -300,14 +327,14 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
 
           <Section title="Errors">
             <p>
-              The UI surfaces validation errors before the request is sent. API
-              errors may include <code>error</code> and <code>detail</code>{" "}
-              fields—check the results panel and raw JSON. A 503 usually means
-              predict credentials are missing on the server; 401 means you need
-              to sign in again.
+              The playground shows validation problems before a request is sent.
+              Failed API calls may include <code>error</code> and{" "}
+              <code>detail</code> in the results panel and in raw JSON—use those
+              messages to fix state, questions, or your client payload.
             </p>
           </Section>
         </Card>
+        </div>
       </div>
     </div>
   );

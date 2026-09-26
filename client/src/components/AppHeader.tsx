@@ -26,7 +26,7 @@ export function AppHeader({
 
   return (
     <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:shrink-0">
-      <div>
+      <div className="min-w-0 flex-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           {PRODUCT_NAME}
         </h1>
@@ -40,7 +40,9 @@ export function AppHeader({
             How to structure requests, interpret answers, and use the playground.
           </p>
         )}
-        <nav className="mt-3 flex flex-wrap gap-2">
+      </div>
+      <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
+        <nav className="flex flex-wrap gap-2">
           <a
             href="/"
             className={`rounded-md px-3 py-1.5 text-sm font-medium ${
@@ -62,8 +64,6 @@ export function AppHeader({
             Documentation
           </a>
         </nav>
-      </div>
-      <div className="flex flex-col items-start gap-2 sm:items-end">
         <Badge
           variant={
             configured === null ? "default" : configured ? "success" : "warning"
