@@ -92,7 +92,9 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
   }, []);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden lg:px-8">
+    <div
+      className="mx-auto max-w-7xl py-4 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] sm:px-6 sm:py-6 lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden lg:px-8"
+    >
       <AppHeader
         sessionEmail={sessionEmail}
         sessionRole={sessionRole}
@@ -125,8 +127,8 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
               </li>
               <li>
                 Start from a preset (<strong>Invoice routing</strong> or{" "}
-                <strong>Support ticket</strong>) or build your own{" "}
-                <strong>state</strong> and questions.
+                <strong>Support ticket</strong>), or enter state as natural
+                language (subject and body) or JSON, then add questions.
               </li>
               <li>
                 Use <strong>Request preview</strong> to check the JSON before
@@ -200,7 +202,10 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
               <code>state</code> must be a non-empty JSON <strong>object</strong>{" "}
               (not an array or string). It is the shared context for every
               question in the request—emails, tickets, form fields, or any
-              structured record your workflow needs.
+              structured record your workflow needs. In the playground,{" "}
+              <strong>Natural language</strong> collects a subject and body and
+              sends them as the object below. <strong>JSON</strong> sends the
+              object you write.
             </p>
             <pre className="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800">
               {JSON.stringify(
@@ -289,7 +294,7 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
 
           <Section title="Built-in presets">
             <div className="space-y-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:p-4">
                 <h3 className="font-medium text-slate-900">
                   {INVOICE_PRESET.name}
                 </h3>
@@ -299,7 +304,7 @@ export function DocsPage({ sessionEmail, sessionRole, onLogout }: DocsPageProps)
                   to billing, technical, or sales.
                 </p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:p-4">
                 <h3 className="font-medium text-slate-900">
                   {SUPPORT_TICKET_PRESET.name}
                 </h3>

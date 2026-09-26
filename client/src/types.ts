@@ -44,12 +44,16 @@ export interface PredictResponse {
 }
 
 export interface QuestionDraft {
+  /** Stable React list key; not sent in predict requests. */
+  draftKey: string;
   id: string;
   type: QuestionType;
   instructions: string;
   choiceCriteria: Array<{ key: string; value: string }>;
   scoreCriteria: string[];
 }
+
+export type StateInputMode = "natural" | "json";
 
 export interface PlaygroundPreset {
   name: string;

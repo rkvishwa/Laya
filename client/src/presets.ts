@@ -1,4 +1,13 @@
-import type { PlaygroundPreset, PredictRequest, QuestionDraft } from "./types";
+import type {
+  PlaygroundPreset,
+  PredictRequest,
+  QuestionDraft,
+  StateInputMode,
+} from "./types";
+
+export function newQuestionDraftKey(): string {
+  return crypto.randomUUID();
+}
 
 export const INVOICE_PRESET: PlaygroundPreset = {
   name: "Invoice routing",
@@ -10,6 +19,7 @@ export const INVOICE_PRESET: PlaygroundPreset = {
   ),
   questions: [
     {
+      draftKey: "preset-invoice-dept",
       id: "dept",
       type: "choice",
       instructions: "Route inquiry to the correct department",
@@ -46,6 +56,7 @@ export const SUPPORT_TICKET_PRESET: PlaygroundPreset = {
   ),
   questions: [
     {
+      draftKey: "preset-support-department",
       id: "department",
       type: "choice",
       instructions: "Determine ticket department",
@@ -67,6 +78,7 @@ export const SUPPORT_TICKET_PRESET: PlaygroundPreset = {
       scoreCriteria: ["", ""],
     },
     {
+      draftKey: "preset-support-refund",
       id: "refund_requested",
       type: "choice",
       instructions:
@@ -85,6 +97,7 @@ export const SUPPORT_TICKET_PRESET: PlaygroundPreset = {
       scoreCriteria: ["", ""],
     },
     {
+      draftKey: "preset-support-urgency",
       id: "urgency",
       type: "score",
       instructions:
@@ -103,6 +116,7 @@ export const PRESETS = [INVOICE_PRESET, SUPPORT_TICKET_PRESET];
 
 export function newQuestionDraft(type: QuestionDraft["type"] = "choice"): QuestionDraft {
   return {
+    draftKey: newQuestionDraftKey(),
     id: `q${Date.now()}`,
     type,
     instructions: "",
@@ -116,6 +130,7 @@ export function newQuestionDraft(type: QuestionDraft["type"] = "choice"): Questi
 
 export function newBooleanChoiceDraft(id = `bool${Date.now()}`): QuestionDraft {
   return {
+    draftKey: newQuestionDraftKey(),
     id,
     type: "choice",
     instructions: "Answer yes or no based on the state",
@@ -127,29 +142,73 @@ export function newBooleanChoiceDraft(id = `bool${Date.now()}`): QuestionDraft {
   };
 }
 
-export function buildRequest(
+export function readSubjectBody(
   stateText: string,
+): { subject: string; body: string } | null {
+  try {
+    const parsed = JSON.parse(stateText);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    const record = parsed as Record<string, unknown>;
+    return {
+      subject: typeof record.subject === "string" ? record.subject : "",
+      body: typeof record.body === "string" ? record.body : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function formatNaturalState(subject: string, body: string): string {
+  return JSON.stringify(
+    { subject: subject.trim(), body: body.trim() },
+    null,
+    2,
+  );
+}
+
+export function buildRequest(
+  input: {
+    mode: StateInputMode;
+    stateText: string;
+    subject: string;
+    body: string;
+  },
   questions: QuestionDraft[],
 ): { request: PredictRequest | null; error: string | null } {
   let state: PredictRequest["state"];
-  try {
-    const parsed = JSON.parse(stateText);
-    if (
-      parsed === null ||
-      typeof parsed !== "object" ||
-      Array.isArray(parsed)
-    ) {
+
+  if (input.mode === "natural") {
+    const subject = input.subject.trim();
+    const body = input.body.trim();
+    if (!subject) {
+      return { request: null, error: "Subject is required." };
+    }
+    if (!body) {
+      return { request: null, error: "Body is required." };
+    }
+    state = { subject, body };
+  } else {
+    try {
+      const parsed = JSON.parse(input.stateText);
+      if (
+        parsed === null ||
+        typeof parsed !== "object" ||
+        Array.isArray(parsed)
+      ) {
+        return {
+          request: null,
+          error: "State must be a JSON object (not an array or plain string).",
+        };
+      }
+      state = parsed as Record<string, unknown>;
+    } catch {
       return {
         request: null,
-        error: "State must be a JSON object (not an array or plain string).",
+        error: "State must be valid JSON object.",
       };
     }
-    state = parsed as Record<string, unknown>;
-  } catch {
-    return {
-      request: null,
-      error: "State must be valid JSON object.",
-    };
   }
 
   if (Object.keys(state).length === 0) {

@@ -1,4 +1,4 @@
-import { newBooleanChoiceDraft } from "../presets";
+import { newBooleanChoiceDraft, newQuestionDraft } from "../presets";
 import type { QuestionDraft } from "../types";
 import { Button } from "./ui/Button";
 import { Input, Label, Select, Textarea } from "./ui/Field";
@@ -9,25 +9,19 @@ interface Props {
 }
 
 export function QuestionEditor({ questions, onChange }: Props) {
-  function update(id: string, patch: Partial<QuestionDraft>) {
-    onChange(questions.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+  function update(draftKey: string, patch: Partial<QuestionDraft>) {
+    onChange(
+      questions.map((q) => (q.draftKey === draftKey ? { ...q, ...patch } : q)),
+    );
   }
 
-  function remove(id: string) {
-    onChange(questions.filter((q) => q.id !== id));
+  function remove(draftKey: string) {
+    onChange(questions.filter((q) => q.draftKey !== draftKey));
   }
 
   function add(type: QuestionDraft["type"]) {
-    const base: QuestionDraft = {
-      id: `q${questions.length + 1}`,
-      type,
-      instructions: "",
-      choiceCriteria: [
-        { key: "option_a", value: "Description A" },
-        { key: "option_b", value: "Description B" },
-      ],
-      scoreCriteria: ["low", "medium", "high"],
-    };
+    const base = newQuestionDraft(type);
+    base.id = `q${questions.length + 1}`;
     onChange([...questions, base]);
   }
 
@@ -55,15 +49,15 @@ export function QuestionEditor({ questions, onChange }: Props) {
       <div className="space-y-3">
         {questions.map((q) => (
           <div
-            key={q.id}
-            className="rounded-lg border border-slate-200 bg-slate-50/80 p-4"
+            key={q.draftKey}
+            className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:p-4"
           >
             <div className="grid gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
               <Label>
                 Id
                 <Input
                   value={q.id}
-                  onChange={(e) => update(q.id, { id: e.target.value })}
+                  onChange={(e) => update(q.draftKey, { id: e.target.value })}
                   placeholder="dept"
                 />
               </Label>
@@ -72,7 +66,9 @@ export function QuestionEditor({ questions, onChange }: Props) {
                 <Select
                   value={q.type}
                   onChange={(e) =>
-                    update(q.id, { type: e.target.value as QuestionDraft["type"] })
+                    update(q.draftKey, {
+                      type: e.target.value as QuestionDraft["type"],
+                    })
                   }
                 >
                   <option value="choice">choice</option>
@@ -82,7 +78,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
               <Button
                 type="button"
                 variant="danger"
-                onClick={() => remove(q.id)}
+                onClick={() => remove(q.draftKey)}
                 aria-label="Remove question"
               >
                 Remove
@@ -95,7 +91,9 @@ export function QuestionEditor({ questions, onChange }: Props) {
                 rows={2}
                 className="font-sans"
                 value={q.instructions}
-                onChange={(e) => update(q.id, { instructions: e.target.value })}
+                onChange={(e) =>
+                  update(q.draftKey, { instructions: e.target.value })
+                }
                 placeholder="What should the model decide?"
               />
             </Label>
@@ -109,7 +107,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
                     variant="ghost"
                     className="py-1"
                     onClick={() =>
-                      update(q.id, {
+                      update(q.draftKey, {
                         choiceCriteria: [...q.choiceCriteria, { key: "", value: "" }],
                       })
                     }
@@ -128,7 +126,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
                         onChange={(e) => {
                           const next = [...q.choiceCriteria];
                           next[idx] = { ...next[idx], key: e.target.value };
-                          update(q.id, { choiceCriteria: next });
+                          update(q.draftKey, { choiceCriteria: next });
                         }}
                         placeholder="billing"
                       />
@@ -137,7 +135,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
                         onChange={(e) => {
                           const next = [...q.choiceCriteria];
                           next[idx] = { ...next[idx], value: e.target.value };
-                          update(q.id, { choiceCriteria: next });
+                          update(q.draftKey, { choiceCriteria: next });
                         }}
                         placeholder="invoice and refund"
                       />
@@ -146,7 +144,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
                         variant="ghost"
                         className="px-2"
                         onClick={() =>
-                          update(q.id, {
+                          update(q.draftKey, {
                             choiceCriteria: q.choiceCriteria.filter((_, i) => i !== idx),
                           })
                         }
@@ -176,7 +174,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
                     variant="ghost"
                     className="py-1"
                     onClick={() =>
-                      update(q.id, { scoreCriteria: [...q.scoreCriteria, ""] })
+                      update(q.draftKey, { scoreCriteria: [...q.scoreCriteria, ""] })
                     }
                   >
                     + Level
@@ -196,7 +194,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
                         onChange={(e) => {
                           const next = [...q.scoreCriteria];
                           next[idx] = e.target.value;
-                          update(q.id, { scoreCriteria: next });
+                          update(q.draftKey, { scoreCriteria: next });
                         }}
                         placeholder="Describe this level"
                       />
@@ -205,7 +203,7 @@ export function QuestionEditor({ questions, onChange }: Props) {
                         variant="ghost"
                         className="px-2"
                         onClick={() =>
-                          update(q.id, {
+                          update(q.draftKey, {
                             scoreCriteria: q.scoreCriteria.filter((_, i) => i !== idx),
                           })
                         }

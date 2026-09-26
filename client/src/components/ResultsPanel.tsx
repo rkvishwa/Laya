@@ -58,7 +58,7 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
     return (
       <div
         key={id}
-        className="rounded-lg border border-slate-200 bg-slate-50/80 p-4"
+        className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:p-4"
       >
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="font-semibold text-slate-900">{id}</span>

@@ -25,7 +25,7 @@ export function AppHeader({
       : "Set MODEL_BASE_URL and MODEL_API_KEY in .env";
 
   return (
-    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:shrink-0">
+    <header className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4 lg:shrink-0">
       <div className="min-w-0 flex-1">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           {PRODUCT_NAME}
@@ -42,10 +42,10 @@ export function AppHeader({
         )}
       </div>
       <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
-        <nav className="flex flex-wrap gap-2">
+        <nav className="flex w-full gap-2 sm:w-auto sm:flex-wrap">
           <a
             href="/"
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            className={`flex min-h-11 flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium sm:min-h-0 sm:flex-none sm:py-1.5 ${
               isPlayground
                 ? "bg-slate-900 text-white"
                 : "text-slate-700 hover:bg-slate-100"
@@ -55,7 +55,7 @@ export function AppHeader({
           </a>
           <a
             href="/docs"
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            className={`flex min-h-11 flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium sm:min-h-0 sm:flex-none sm:py-1.5 ${
               !isPlayground
                 ? "bg-slate-900 text-white"
                 : "text-slate-700 hover:bg-slate-100"
@@ -75,8 +75,8 @@ export function AppHeader({
               ? "Server configured"
               : configHint}
         </Badge>
-        <div className="flex items-center gap-3 text-sm text-slate-600">
-          <span>{sessionEmail}</span>
+        <div className="flex w-full items-center justify-between gap-3 text-sm text-slate-600 sm:w-auto sm:justify-start">
+          <span className="min-w-0 truncate">{sessionEmail}</span>
           <Button type="button" variant="ghost" onClick={onLogout}>
             Log out
           </Button>

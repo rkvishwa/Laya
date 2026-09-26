@@ -48,7 +48,9 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div
+      className="flex min-h-screen items-center justify-center py-12 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]"
+    >
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Brainvave Decision Model</CardTitle>
