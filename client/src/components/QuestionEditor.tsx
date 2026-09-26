@@ -1,3 +1,4 @@
+import { newBooleanChoiceDraft } from "../presets";
 import type { QuestionDraft } from "../types";
 import { Button } from "./ui/Button";
 import { Input, Label, Select, Textarea } from "./ui/Field";
@@ -26,10 +27,12 @@ export function QuestionEditor({ questions, onChange }: Props) {
         { key: "option_b", value: "Description B" },
       ],
       scoreCriteria: ["low", "medium", "high"],
-      noulTrue: "",
-      noulFalse: "",
     };
     onChange([...questions, base]);
+  }
+
+  function addBoolean() {
+    onChange([...questions, newBooleanChoiceDraft(`q${questions.length + 1}`)]);
   }
 
   return (
@@ -43,8 +46,8 @@ export function QuestionEditor({ questions, onChange }: Props) {
           <Button type="button" variant="ghost" onClick={() => add("score")}>
             + Score
           </Button>
-          <Button type="button" variant="ghost" onClick={() => add("noul")}>
-            + Noul
+          <Button type="button" variant="ghost" onClick={addBoolean}>
+            + Boolean
           </Button>
         </div>
       </div>
@@ -74,7 +77,6 @@ export function QuestionEditor({ questions, onChange }: Props) {
                 >
                   <option value="choice">choice</option>
                   <option value="score">score</option>
-                  <option value="noul">noul</option>
                 </Select>
               </Label>
               <Button
@@ -154,6 +156,12 @@ export function QuestionEditor({ questions, onChange }: Props) {
                     </div>
                   ))}
                 </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  For yes/no decisions, use keys{" "}
+                  <code className="rounded bg-slate-200 px-1">true</code> and{" "}
+                  <code className="rounded bg-slate-200 px-1">false</code> with
+                  concrete definitions.
+                </p>
               </div>
             )}
 
@@ -207,27 +215,6 @@ export function QuestionEditor({ questions, onChange }: Props) {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {q.type === "noul" && (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <Label>
-                  Yes means (optional)
-                  <Input
-                    value={q.noulTrue}
-                    onChange={(e) => update(q.id, { noulTrue: e.target.value })}
-                    placeholder="What counts as yes"
-                  />
-                </Label>
-                <Label>
-                  No means (optional)
-                  <Input
-                    value={q.noulFalse}
-                    onChange={(e) => update(q.id, { noulFalse: e.target.value })}
-                    placeholder="What counts as no"
-                  />
-                </Label>
               </div>
             )}
           </div>

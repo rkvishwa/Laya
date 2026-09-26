@@ -1,4 +1,4 @@
-export type QuestionType = "choice" | "score" | "noul";
+export type QuestionType = "choice" | "score";
 
 export interface ChoiceQuestion {
   type: "choice";
@@ -12,18 +12,10 @@ export interface ScoreQuestion {
   criteria: string[];
 }
 
-export interface NoulQuestion {
-  type: "noul";
-  instructions: string;
-  criteria?: { true?: string; false?: string };
-}
-
-export type Question = ChoiceQuestion | ScoreQuestion | NoulQuestion;
-
-export type StateValue = string | Record<string, unknown>;
+export type Question = ChoiceQuestion | ScoreQuestion;
 
 export interface PredictRequest {
-  state: StateValue;
+  state: Record<string, unknown>;
   questions: Record<string, Question>;
 }
 
@@ -37,27 +29,17 @@ export interface ChoiceAnswer {
 export interface ScoreAnswer {
   type: "score";
   score: number;
-  legend?: Record<string, string>;
   choice?: string;
   probabilities: Record<string, number>;
   confidence?: number;
 }
 
-export interface NoulAnswer {
-  type: "noul";
-  noul?: number;
-  choice?: string;
-  confidence?: number;
-  probabilities?: Record<string, number>;
-}
-
-export type Answer = ChoiceAnswer | ScoreAnswer | NoulAnswer;
+export type Answer = ChoiceAnswer | ScoreAnswer;
 
 export interface PredictResponse {
   model?: string;
+  status?: "success" | "error" | string;
   answers?: Record<string, Answer>;
-  usage?: { input_tokens?: number; output_tokens?: number };
-  routing?: Record<string, unknown>;
   error?: string;
   detail?: string;
 }
@@ -68,8 +50,6 @@ export interface QuestionDraft {
   instructions: string;
   choiceCriteria: Array<{ key: string; value: string }>;
   scoreCriteria: string[];
-  noulTrue: string;
-  noulFalse: string;
 }
 
 export interface PlaygroundPreset {

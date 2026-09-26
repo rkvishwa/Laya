@@ -1,22 +1,4 @@
-import type { Answer, NoulAnswer, PredictResponse } from "../types";
-
-function noulYesProbability(answer: NoulAnswer): number {
-  if (typeof answer.noul === "number") {
-    return answer.noul;
-  }
-  const pTrue = answer.probabilities?.true;
-  if (typeof pTrue === "number") {
-    return pTrue;
-  }
-  return 0;
-}
-
-function noulHeadlineYes(answer: NoulAnswer, yesProb: number): boolean {
-  if (answer.choice !== undefined) {
-    return answer.choice === "true" || answer.choice.toLowerCase() === "yes";
-  }
-  return yesProb >= 0.5;
-}
+import type { Answer, PredictResponse, ScoreAnswer } from "../types";
 import { Alert } from "./ui/Alert";
 import { Badge } from "./ui/Badge";
 import { Card, CardHeader, CardTitle } from "./ui/Card";
@@ -33,6 +15,12 @@ function ProbabilityBars({
 }: {
   items: Array<{ label: string; value: number }>;
 }) {
+  if (items.length === 0) {
+    return (
+      <p className="mt-2 text-sm text-slate-500">No probability data returned.</p>
+    );
+  }
+
   return (
     <div className="mt-3 space-y-2">
       {items.map(({ label, value }) => (
@@ -56,8 +44,17 @@ function ProbabilityBars({
   );
 }
 
+function scoreDisplay(answer: ScoreAnswer): string {
+  if (typeof answer.score === "number" && Number.isFinite(answer.score)) {
+    return answer.score.toFixed(4);
+  }
+  return "—";
+}
+
 export function ResultsPanel({ response, error, meta, loading }: Props) {
   function renderAnswer(id: string, answer: Answer) {
+    const probabilities = answer.probabilities ?? {};
+
     return (
       <div
         key={id}
@@ -79,7 +76,7 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
               )}
             </div>
             <ProbabilityBars
-              items={Object.entries(answer.probabilities).map(([label, p]) => ({
+              items={Object.entries(probabilities).map(([label, p]) => ({
                 label,
                 value: p,
               }))}
@@ -91,8 +88,8 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
           <>
             <div className="flex items-center justify-between gap-3">
               <strong className="text-lg text-slate-900">
-                {answer.score.toFixed(2)}
-                {answer.choice !== undefined && (
+                {scoreDisplay(answer)}
+                {answer.choice !== undefined && answer.choice !== "" && (
                   <span className="ml-2 text-base font-medium text-slate-700">
                     ({answer.choice})
                   </span>
@@ -105,48 +102,13 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
               )}
             </div>
             <ProbabilityBars
-              items={Object.entries(answer.probabilities).map(([key, p]) => ({
-                label: answer.legend?.[key] ?? key,
+              items={Object.entries(probabilities).map(([label, p]) => ({
+                label,
                 value: p,
               }))}
             />
           </>
         )}
-
-        {answer.type === "noul" && (() => {
-          const yesProb = noulYesProbability(answer);
-          const yes = noulHeadlineYes(answer, yesProb);
-          const bars =
-            answer.probabilities &&
-            typeof answer.probabilities.false === "number" &&
-            typeof answer.probabilities.true === "number"
-              ? [
-                  { label: "false", value: answer.probabilities.false },
-                  { label: "true", value: answer.probabilities.true },
-                ]
-              : [
-                  { label: "no", value: 1 - yesProb },
-                  { label: "yes", value: yesProb },
-                ];
-          return (
-            <>
-              <div className="flex items-center justify-between gap-3">
-                <strong className="text-lg text-slate-900">
-                  {yes ? "yes" : "no"}
-                </strong>
-                <span className="text-sm text-slate-500">
-                  {answer.confidence !== undefined && (
-                    <>
-                      confidence {(answer.confidence * 100).toFixed(0)}% ·{" "}
-                    </>
-                  )}
-                  probability yes {(yesProb * 100).toFixed(0)}%
-                </span>
-              </div>
-              <ProbabilityBars items={bars} />
-            </>
-          );
-        })()}
       </div>
     );
   }
@@ -177,16 +139,15 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
           {response.model && (
             <p className="text-sm text-slate-600">Model: {response.model}</p>
           )}
+          {response.status && response.status !== "success" && (
+            <Alert variant="warning">
+              API status: {response.status}
+            </Alert>
+          )}
           {response.answers &&
             Object.entries(response.answers).map(([id, answer]) =>
               renderAnswer(id, answer),
             )}
-          {response.usage && (
-            <p className="text-sm text-slate-500">
-              Tokens: {response.usage.input_tokens ?? "?"} in /{" "}
-              {response.usage.output_tokens ?? "?"} out
-            </p>
-          )}
           <details className="rounded-lg border border-slate-200 bg-slate-50">
             <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-700">
               Raw JSON

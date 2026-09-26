@@ -49,12 +49,12 @@ Local dev uses `server/proxy.mjs`. Production on Vercel uses the same shared han
 
 ## How it works
 
-- The React UI builds `{ state, questions }` with `choice`, `score`, and `noul` question types.
+- The React UI builds `{ state, questions }` for the Kev predict API: `state` is a JSON object, and each question is `choice` (categorical) or `score` (ordinal). Yes/no decisions use `choice` with criteria keys `true` and `false`.
 - The local proxy at `server/proxy.mjs` forwards requests to your `LAYA_DOMAIN` with the `X-API-Key` header.
 - Your API key stays in `.env` and is never sent to the browser.
 - Login is required before the playground or API routes (`/api/health`, `/api/predict`) are available. Sessions are stored in an httpOnly cookie signed with `AUTH_SECRET`.
 
 ## Presets
 
-- **Invoice routing** — matches the sample curl from the Laya docs.
-- **Invoice + urgency + refund** — exercises all three question types in one request.
+- **Invoice routing** — single `choice` question for department routing.
+- **Support ticket** — `choice` department and refund flag plus `score` urgency, aligned with the Kev agent integration example.

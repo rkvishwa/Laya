@@ -136,7 +136,7 @@ export function Playground({ sessionEmail, onLogout }: PlaygroundProps) {
             </CardHeader>
 
             <Label>
-              State (JSON object or plain text)
+              State (JSON object)
               <Textarea
                 rows={8}
                 value={stateText}

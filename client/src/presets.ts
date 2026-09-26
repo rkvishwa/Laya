@@ -2,9 +2,9 @@ import type { PlaygroundPreset, PredictRequest, QuestionDraft } from "./types";
 
 export const INVOICE_PRESET: PlaygroundPreset = {
   name: "Invoice routing",
-  description: "Route a billing email to the right team.",
+  description: "Route a billing email to the correct department.",
   stateText: JSON.stringify(
-    { subject: "Need invoice", body: "Please send receipt" },
+    { subject: "Need invoice", body: "Please send receipt for order #4821" },
     null,
     2,
   ),
@@ -12,65 +12,94 @@ export const INVOICE_PRESET: PlaygroundPreset = {
     {
       id: "dept",
       type: "choice",
-      instructions: "Route team",
+      instructions: "Route inquiry to the correct department",
       choiceCriteria: [
-        { key: "billing", value: "invoice and refund" },
-        { key: "tech", value: "bugs" },
+        {
+          key: "billing",
+          value: "Invoices, payment failures, double charges, refunds",
+        },
+        {
+          key: "technical",
+          value: "Software bugs, crashes, performance degradation",
+        },
+        {
+          key: "sales",
+          value: "Enterprise volume pricing, custom integrations",
+        },
       ],
       scoreCriteria: ["", ""],
-      noulTrue: "",
-      noulFalse: "",
     },
   ],
 };
 
-export const FULL_PRESET: PlaygroundPreset = {
-  name: "Invoice + urgency + refund",
-  description: "All three question types in one request.",
+export const SUPPORT_TICKET_PRESET: PlaygroundPreset = {
+  name: "Support ticket",
+  description: "Department, refund flag, and urgency in one request.",
   stateText: JSON.stringify(
     {
       subject: "Need invoice",
-      body: "Please send receipt for order #4821. I was charged twice and need a refund today.",
+      body:
+        "Please send receipt for order #4821. I was charged twice and need a refund today.",
     },
     null,
     2,
   ),
   questions: [
     {
-      id: "dept",
+      id: "department",
       type: "choice",
-      instructions: "Route team",
+      instructions: "Determine ticket department",
       choiceCriteria: [
-        { key: "billing", value: "invoice and refund" },
-        { key: "tech", value: "bugs" },
-        { key: "sales", value: "pricing or new accounts" },
+        {
+          key: "billing",
+          value:
+            "Invoices, receipts, payment questions, and duplicate charges",
+        },
+        {
+          key: "engineering",
+          value: "Application crashes, bugs, API errors",
+        },
+        {
+          key: "sales",
+          value: "Pricing plans, licensing, new accounts",
+        },
       ],
       scoreCriteria: ["", ""],
-      noulTrue: "",
-      noulFalse: "",
+    },
+    {
+      id: "refund_requested",
+      type: "choice",
+      instructions:
+        "Determine if the user demands monetary compensation or refund",
+      choiceCriteria: [
+        {
+          key: "true",
+          value: "Explicit request for money back or refund",
+        },
+        {
+          key: "false",
+          value:
+            "No refund requested, or explicit statement of no refund needed",
+        },
+      ],
+      scoreCriteria: ["", ""],
     },
     {
       id: "urgency",
       type: "score",
-      instructions: "How urgent is this message?",
+      instructions:
+        "Score the customer turnaround deadline from lowest to highest",
       choiceCriteria: [{ key: "", value: "" }],
-      scoreCriteria: ["not urgent", "soon", "critical deadline"],
-      noulTrue: "",
-      noulFalse: "",
-    },
-    {
-      id: "refund_requested",
-      type: "noul",
-      instructions: "Does the customer explicitly request a refund?",
-      choiceCriteria: [{ key: "", value: "" }],
-      scoreCriteria: ["", ""],
-      noulTrue: "Customer asks for money back",
-      noulFalse: "No refund request",
+      scoreCriteria: [
+        "Standard request with no specific timeframe",
+        "Turnaround desired within a few business days",
+        "Customer explicitly specifies same-day action, immediate turnaround, or today",
+      ],
     },
   ],
 };
 
-export const PRESETS = [INVOICE_PRESET, FULL_PRESET];
+export const PRESETS = [INVOICE_PRESET, SUPPORT_TICKET_PRESET];
 
 export function newQuestionDraft(type: QuestionDraft["type"] = "choice"): QuestionDraft {
   return {
@@ -82,8 +111,19 @@ export function newQuestionDraft(type: QuestionDraft["type"] = "choice"): Questi
       { key: "option_b", value: "Description B" },
     ],
     scoreCriteria: ["low", "medium", "high"],
-    noulTrue: "",
-    noulFalse: "",
+  };
+}
+
+export function newBooleanChoiceDraft(id = `bool${Date.now()}`): QuestionDraft {
+  return {
+    id,
+    type: "choice",
+    instructions: "Answer yes or no based on the state",
+    choiceCriteria: [
+      { key: "true", value: "Condition is met" },
+      { key: "false", value: "Condition is not met" },
+    ],
+    scoreCriteria: ["", ""],
   };
 }
 
@@ -94,13 +134,26 @@ export function buildRequest(
   let state: PredictRequest["state"];
   try {
     const parsed = JSON.parse(stateText);
-    state = typeof parsed === "string" ? parsed : parsed;
-  } catch {
-    const trimmed = stateText.trim();
-    if (!trimmed) {
-      return { request: null, error: "State cannot be empty." };
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed)
+    ) {
+      return {
+        request: null,
+        error: "State must be a JSON object (not an array or plain string).",
+      };
     }
-    state = trimmed;
+    state = parsed as Record<string, unknown>;
+  } catch {
+    return {
+      request: null,
+      error: "State must be valid JSON object.",
+    };
+  }
+
+  if (Object.keys(state).length === 0) {
+    return { request: null, error: "State cannot be empty." };
   }
 
   const builtQuestions: PredictRequest["questions"] = {};
@@ -127,6 +180,17 @@ export function buildRequest(
           error: `Choice question "${id}" needs at least one option.`,
         };
       }
+      const keys = Object.keys(criteria);
+      const isBoolean =
+        keys.length === 2 && keys.includes("true") && keys.includes("false");
+      if (isBoolean) {
+        if (!criteria.true?.trim() || !criteria.false?.trim()) {
+          return {
+            request: null,
+            error: `Boolean choice "${id}" needs both true and false definitions.`,
+          };
+        }
+      }
       builtQuestions[id] = {
         type: "choice",
         instructions: q.instructions.trim(),
@@ -145,19 +209,6 @@ export function buildRequest(
         instructions: q.instructions.trim(),
         criteria,
       };
-    } else {
-      const question: PredictRequest["questions"][string] = {
-        type: "noul",
-        instructions: q.instructions.trim(),
-      };
-      const trueDesc = q.noulTrue.trim();
-      const falseDesc = q.noulFalse.trim();
-      if (trueDesc || falseDesc) {
-        question.criteria = {};
-        if (trueDesc) question.criteria.true = trueDesc;
-        if (falseDesc) question.criteria.false = falseDesc;
-      }
-      builtQuestions[id] = question;
     }
   }
 
