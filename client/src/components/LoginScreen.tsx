@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle } from "./ui/Card";
 import { Input, Label } from "./ui/Field";
 
 interface LoginScreenProps {
-  onSuccess: (email: string) => void;
+  onSuccess: (email: string, role: "admin" | "guest") => void;
 }
 
 export function LoginScreen({ onSuccess }: LoginScreenProps) {
@@ -29,6 +29,7 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
 
       const payload = await parseJsonResponse<{
         email?: string;
+        role?: "admin" | "guest";
         error?: string;
         detail?: string;
       }>(res);
@@ -38,7 +39,7 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
         return;
       }
 
-      onSuccess(payload.email || email);
+      onSuccess(payload.email || email, payload.role === "guest" ? "guest" : "admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
     } finally {
@@ -50,11 +51,12 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle>Brainvave Decision Model</CardTitle>
         </CardHeader>
 
         <p className="mb-4 text-sm text-slate-600">
-          Enter the credentials configured in your server environment.
+          Sign in with the admin credentials configured on the server, or with a
+          guest account if your operator has enabled one.
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

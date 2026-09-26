@@ -4,18 +4,19 @@ import { buildRequest, INVOICE_PRESET, PRESETS } from "../presets";
 import type { PredictResponse, QuestionDraft } from "../types";
 import { QuestionEditor } from "./QuestionEditor";
 import { ResultsPanel } from "./ResultsPanel";
+import { AppHeader } from "./AppHeader";
 import { Alert } from "./ui/Alert";
-import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Card, CardHeader, CardTitle } from "./ui/Card";
 import { Label, Textarea } from "./ui/Field";
 
 interface PlaygroundProps {
   sessionEmail: string;
+  sessionRole: "admin" | "guest";
   onLogout: () => void;
 }
 
-export function Playground({ sessionEmail, onLogout }: PlaygroundProps) {
+export function Playground({ sessionEmail, sessionRole, onLogout }: PlaygroundProps) {
   const [stateText, setStateText] = useState(INVOICE_PRESET.stateText);
   const [questions, setQuestions] = useState<QuestionDraft[]>(
     INVOICE_PRESET.questions,
@@ -85,36 +86,13 @@ export function Playground({ sessionEmail, onLogout }: PlaygroundProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden lg:px-8">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between lg:shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Laya Query Playground
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-            Compose state and typed questions, then call your self-hosted{" "}
-            <code>/v1/predict</code> endpoint.
-          </p>
-        </div>
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <Badge
-            variant={
-              configured === null ? "default" : configured ? "success" : "warning"
-            }
-          >
-            {configured === null
-              ? "Checking config…"
-              : configured
-                ? "Server configured"
-                : "Set LAYA_DOMAIN and LAYA_API_KEY in .env"}
-          </Badge>
-          <div className="flex items-center gap-3 text-sm text-slate-600">
-            <span>{sessionEmail}</span>
-            <Button type="button" variant="ghost" onClick={onLogout}>
-              Log out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        sessionEmail={sessionEmail}
+        sessionRole={sessionRole}
+        configured={configured}
+        currentPath="playground"
+        onLogout={onLogout}
+      />
 
       <div className="grid gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-none">

@@ -3,13 +3,20 @@ import {
   clearLoginFailures,
   clearSessionCookie,
   createSessionCookie,
-  getAuthEmail,
+  getGuestApiKey,
   getSessionFromContext,
-  isAuthConfigured,
+  isGuestConfigured,
+  isLoginEnabled,
   recordLoginFailure,
   verifyCredentials,
 } from "./auth.mjs";
-import { forwardPredict, layaConfig } from "./upstream.mjs";
+import {
+  forwardPredict,
+  getApiKeyForRole,
+  isPredictConfiguredForSession,
+  modelConfig,
+  predictUrl,
+} from "./upstream.mjs";
 
 function jsonResult(status, body, headers = {}) {
   return { status, body, headers };
@@ -24,11 +31,11 @@ function requireSession(ctx) {
 }
 
 export function handleLogin(ctx, body) {
-  if (!isAuthConfigured()) {
+  if (!isLoginEnabled()) {
     return jsonResult(503, {
       error: "Authentication not configured",
       detail:
-        "Set AUTH_EMAIL, AUTH_PASSWORD, and AUTH_SECRET before logging in.",
+        "Set AUTH_SECRET and admin (AUTH_EMAIL, AUTH_PASSWORD) or guest (GUEST_EMAIL, GUEST_PASSWORD, GUEST_API) credentials before logging in.",
     });
   }
 
@@ -47,12 +54,18 @@ export function handleLogin(ctx, body) {
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
 
-  if (verifyCredentials(email, password)) {
+  const verified = verifyCredentials(email, password);
+  if (verified.ok) {
     clearLoginFailures(ctx);
     return jsonResult(
       200,
-      { email: getAuthEmail() },
-      { "Set-Cookie": createSessionCookie(ctx) },
+      { email: verified.email, role: verified.role },
+      {
+        "Set-Cookie": createSessionCookie(ctx, {
+          email: verified.email,
+          role: verified.role,
+        }),
+      },
     );
   }
 
@@ -71,17 +84,30 @@ export function handleSession(ctx) {
   if (!session) {
     return jsonResult(401, { error: "Unauthorized" });
   }
-  return jsonResult(200, { email: session.email });
+  return jsonResult(200, { email: session.email, role: session.role });
 }
 
 export function handleHealth(ctx) {
   const auth = requireSession(ctx);
   if (auth.error) return auth.error;
 
-  const { configured, domain } = layaConfig();
+  const configured = isPredictConfiguredForSession(auth.session);
   return jsonResult(200, {
     configured,
-    domain: domain || null,
+  });
+}
+
+export function handleDocsInfo(ctx) {
+  const auth = requireSession(ctx);
+  if (auth.error) return auth.error;
+
+  const { baseUrl } = modelConfig();
+  const guestLoginEnabled = isGuestConfigured();
+
+  return jsonResult(200, {
+    guestLoginEnabled,
+    guestApiKey: guestLoginEnabled ? getGuestApiKey() : null,
+    predictUrl: baseUrl ? predictUrl(baseUrl) : null,
   });
 }
 
@@ -89,6 +115,7 @@ export async function handlePredict(ctx, rawBody) {
   const auth = requireSession(ctx);
   if (auth.error) return auth.error;
 
-  const { status, body } = await forwardPredict(rawBody);
+  const apiKey = getApiKeyForRole(auth.session.role);
+  const { status, body } = await forwardPredict(rawBody, { apiKey });
   return jsonResult(status, body);
 }

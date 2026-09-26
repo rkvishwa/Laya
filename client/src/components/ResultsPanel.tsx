@@ -120,7 +120,7 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
         {meta && <span className="text-sm text-slate-500">{meta}</span>}
       </CardHeader>
 
-      {loading && <p className="text-sm text-slate-500">Waiting for Laya…</p>}
+      {loading && <p className="text-sm text-slate-500">Running prediction…</p>}
 
       {error && (
         <Alert variant="error" className="mb-4">
@@ -136,9 +136,6 @@ export function ResultsPanel({ response, error, meta, loading }: Props) {
 
       {!loading && response && (
         <div className="space-y-4">
-          {response.model && (
-            <p className="text-sm text-slate-600">Model: {response.model}</p>
-          )}
           {response.status && response.status !== "success" && (
             <Alert variant="warning">
               API status: {response.status}

@@ -3,7 +3,7 @@ import { config } from "dotenv";
 
 config();
 
-const COOKIE_NAME = "laya_session";
+const COOKIE_NAME = "session";
 const SESSION_MAX_AGE_SEC = 7 * 24 * 60 * 60; // 7 days
 const LOGIN_RATE_LIMIT = 8;
 const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -11,6 +11,10 @@ const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_EMAIL = process.env.AUTH_EMAIL?.trim() || "";
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD?.trim() || "";
 const AUTH_SECRET = process.env.AUTH_SECRET?.trim() || "";
+
+const GUEST_EMAIL = process.env.GUEST_EMAIL?.trim() || "";
+const GUEST_PASSWORD = process.env.GUEST_PASSWORD?.trim() || "";
+const GUEST_API = process.env.GUEST_API?.trim() || "";
 
 const loginAttempts = new Map();
 
@@ -24,12 +28,28 @@ function timingSafeEqualStrings(a, b) {
   return crypto.timingSafeEqual(hashA, hashB);
 }
 
+export function isAdminConfigured() {
+  return Boolean(AUTH_EMAIL && AUTH_PASSWORD);
+}
+
+export function isGuestConfigured() {
+  return Boolean(GUEST_EMAIL && GUEST_PASSWORD && GUEST_API);
+}
+
 export function isAuthConfigured() {
-  return Boolean(AUTH_EMAIL && AUTH_PASSWORD && AUTH_SECRET);
+  return Boolean(isAdminConfigured() && AUTH_SECRET);
+}
+
+export function isLoginEnabled() {
+  return Boolean(AUTH_SECRET && (isAdminConfigured() || isGuestConfigured()));
 }
 
 export function getAuthEmail() {
   return AUTH_EMAIL;
+}
+
+export function getGuestApiKey() {
+  return isGuestConfigured() ? GUEST_API : "";
 }
 
 function signPayload(payload) {
@@ -63,7 +83,10 @@ function verifyToken(token) {
     if (
       typeof payload.exp !== "number" ||
       typeof payload.iat !== "number" ||
-      payload.exp <= Date.now()
+      payload.exp <= Date.now() ||
+      typeof payload.email !== "string" ||
+      !payload.email ||
+      (payload.role !== "admin" && payload.role !== "guest")
     ) {
       return null;
     }
@@ -118,11 +141,13 @@ export function createRequestContext(source) {
   };
 }
 
-export function createSessionCookie(ctx) {
+export function createSessionCookie(ctx, session) {
   const now = Date.now();
   const payload = {
     iat: now,
     exp: now + SESSION_MAX_AGE_SEC * 1000,
+    email: session.email,
+    role: session.role,
   };
   const token = signPayload(payload);
   return buildCookie(COOKIE_NAME, token, {
@@ -147,7 +172,7 @@ export function getSessionFromContext(ctx) {
   const token = cookies[COOKIE_NAME];
   const payload = verifyToken(token);
   if (!payload) return null;
-  return { email: AUTH_EMAIL };
+  return { email: payload.email, role: payload.role };
 }
 
 export function getSessionFromRequest(req) {
@@ -155,11 +180,28 @@ export function getSessionFromRequest(req) {
 }
 
 export function verifyCredentials(email, password) {
-  if (!isAuthConfigured()) return false;
-  if (!email || !password) return false;
-  if (!timingSafeEqualStrings(email, AUTH_EMAIL)) return false;
-  if (!timingSafeEqualStrings(password, AUTH_PASSWORD)) return false;
-  return true;
+  if (!isLoginEnabled()) return { ok: false };
+  if (!email || !password) return { ok: false };
+
+  if (isAdminConfigured()) {
+    if (
+      timingSafeEqualStrings(email, AUTH_EMAIL) &&
+      timingSafeEqualStrings(password, AUTH_PASSWORD)
+    ) {
+      return { ok: true, email: AUTH_EMAIL, role: "admin" };
+    }
+  }
+
+  if (isGuestConfigured()) {
+    if (
+      timingSafeEqualStrings(email, GUEST_EMAIL) &&
+      timingSafeEqualStrings(password, GUEST_PASSWORD)
+    ) {
+      return { ok: true, email: GUEST_EMAIL, role: "guest" };
+    }
+  }
+
+  return { ok: false };
 }
 
 export function checkLoginRateLimit(ctx) {

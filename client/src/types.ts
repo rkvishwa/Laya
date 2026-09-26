@@ -37,7 +37,6 @@ export interface ScoreAnswer {
 export type Answer = ChoiceAnswer | ScoreAnswer;
 
 export interface PredictResponse {
-  model?: string;
   status?: "success" | "error" | string;
   answers?: Record<string, Answer>;
   error?: string;

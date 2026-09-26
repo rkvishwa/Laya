@@ -1,7 +1,9 @@
-export function predictUrl(domain) {
-  if (!domain) return null;
+import { getGuestApiKey } from "./auth.mjs";
 
-  let base = domain.trim().replace(/\/+$/, "");
+export function predictUrl(baseUrl) {
+  if (!baseUrl) return null;
+
+  let base = baseUrl.trim().replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(base)) {
     base = `https://${base}`;
   }
@@ -13,27 +15,50 @@ export function predictUrl(domain) {
   return `${base}/v1/predict`;
 }
 
-export function layaConfig() {
-  const domain = process.env.LAYA_DOMAIN?.trim() || "";
-  const apiKey = process.env.LAYA_API_KEY?.trim() || "";
+export function modelConfig() {
+  const baseUrl = process.env.MODEL_BASE_URL?.trim() || "";
+  const apiKey = process.env.MODEL_API_KEY?.trim() || "";
   return {
-    domain,
+    baseUrl,
     apiKey,
-    predictUrl: predictUrl(domain),
-    configured: Boolean(domain && apiKey),
+    predictUrl: predictUrl(baseUrl),
+    configured: Boolean(baseUrl && apiKey),
   };
 }
 
-export async function forwardPredict(rawBody) {
-  const { apiKey, predictUrl: url, configured } = layaConfig();
+export function getApiKeyForRole(role) {
+  if (role === "guest") {
+    return getGuestApiKey();
+  }
+  return process.env.MODEL_API_KEY?.trim() || "";
+}
 
-  if (!configured) {
+export function isPredictConfiguredForSession(session) {
+  const baseUrl = process.env.MODEL_BASE_URL?.trim() || "";
+  const apiKey = getApiKeyForRole(session?.role);
+  return Boolean(baseUrl && apiKey);
+}
+
+function sanitizePredictPayload(payload) {
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    return payload;
+  }
+  const { model: _model, ...rest } = payload;
+  return rest;
+}
+
+export async function forwardPredict(rawBody, { apiKey }) {
+  const baseUrl = process.env.MODEL_BASE_URL?.trim() || "";
+  const url = predictUrl(baseUrl);
+  const key = apiKey?.trim() || "";
+
+  if (!baseUrl || !key) {
     return {
       status: 503,
       body: {
         error: "Missing configuration",
         detail:
-          "Set LAYA_DOMAIN and LAYA_API_KEY before running predictions.",
+          "Set MODEL_BASE_URL and the appropriate API key before running predictions.",
       },
     };
   }
@@ -49,7 +74,7 @@ export async function forwardPredict(rawBody) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": apiKey,
+        "X-API-Key": key,
       },
       body: rawBody,
     });
@@ -62,7 +87,10 @@ export async function forwardPredict(rawBody) {
       payload = { raw: text };
     }
 
-    return { status: upstream.status, body: payload };
+    return {
+      status: upstream.status,
+      body: sanitizePredictPayload(payload),
+    };
   } catch (err) {
     return {
       status: 502,

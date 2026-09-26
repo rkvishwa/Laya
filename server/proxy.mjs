@@ -1,14 +1,15 @@
 import http from "node:http";
 import { config } from "dotenv";
-import { createRequestContext, isAuthConfigured } from "./auth.mjs";
+import { createRequestContext, isLoginEnabled } from "./auth.mjs";
 import {
+  handleDocsInfo,
   handleHealth,
   handleLogin,
   handleLogout,
   handlePredict,
   handleSession,
 } from "./handlers.mjs";
-import { layaConfig } from "./upstream.mjs";
+import { modelConfig } from "./upstream.mjs";
 
 config();
 
@@ -61,6 +62,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url === "/api/docs-info") {
+    sendResult(res, handleDocsInfo(ctx));
+    return;
+  }
+
   if (req.method === "POST" && url === "/api/predict") {
     try {
       const rawBody = await readBody(req);
@@ -75,16 +81,16 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  const { configured, predictUrl } = layaConfig();
-  console.log(`Laya proxy listening on http://localhost:${PORT}`);
-  if (!isAuthConfigured()) {
+  const { configured, predictUrl } = modelConfig();
+  console.log(`API proxy listening on http://localhost:${PORT}`);
+  if (!isLoginEnabled()) {
     console.warn(
-      "Warning: AUTH_EMAIL, AUTH_PASSWORD, and/or AUTH_SECRET are not set in .env",
+      "Warning: AUTH_SECRET and admin or guest login credentials are not set in .env",
     );
   }
   if (!configured) {
     console.warn(
-      "Warning: LAYA_DOMAIN and/or LAYA_API_KEY are not set in .env",
+      "Warning: MODEL_BASE_URL and/or MODEL_API_KEY are not set in .env",
     );
   } else {
     console.log(`Forwarding to ${predictUrl}`);
